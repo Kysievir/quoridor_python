@@ -7,8 +7,8 @@ class Board:
         self.is_terminal = False
         self.rows = rows
         self.cols = cols
-        self.p1_pawn = (1, 5)
-        self.p2_pawn = (9, 5)
+        self.p1_pawn = (0, 4)
+        self.p2_pawn = (8, 4)
         self.p1_fences = []
         self.p2_fences = []
         self.fences = []

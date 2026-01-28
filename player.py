@@ -11,7 +11,11 @@ class Player:
         pass
 
 class HumanPlayer(Player):
-    pass
+    def __init__(self, player_no, name=None):
+        super().__init__(player_no, name)
+        self.is_bot = False
 
 class BotPlayer(Player):
-    pass
+    def __init__(self, player_no, name=None):
+        super().__init__(player_no, name)
+        self.is_bot = True
