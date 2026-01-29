@@ -50,18 +50,18 @@ def run_client():
                 r, c = board.pawns[client.player_id - 1]
                 move = None
                 if event.key == pygame.K_UP:
-                    move = (r - 1, c)
+                    move = (r, c + 1)  # (r - 1, c)
                 elif event.key == pygame.K_DOWN:
-                    move = (r + 1, c)
+                    move = (r, c - 1)# (r + 1, c)
                 elif event.key == pygame.K_LEFT:
-                    move = (r, c - 1)
+                    move = (r - 1, c)
                 elif event.key == pygame.K_RIGHT:
-                    move = (r, c + 1)
+                    move = (r + 1, c)
 
                 if move and move in board.get_valid_pawn_moves():
                     client.send_action(MovePawn(move[0], move[1]))
                     
-            if event.type == pygame.MOUSEBUTTONDOWN and board.curr_player == client.player_id:
+            elif event.type == pygame.MOUSEBUTTONDOWN and board.curr_player == client.player_id:
                 print("MY TURN, MOUSE CLICK")
                 mx, my = event.pos
 

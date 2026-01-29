@@ -18,12 +18,10 @@ class Board:
         self.cols = cols
 
         # TODO: Combine p1/p2 properties to one.
-        #self.p1_pawn = (1, (cols + 1) //  2)
-        #self.p2_pawn = (rows, (cols + 1) // 2)
         self.p1_fences = []
         self.p2_fences = []
 
-        self.pawns = [(1, 5), (9, 5)]
+        self.pawns = [((cols + 1) // 2, 1), ((cols + 1) // 2, rows)]
         self.fences = [[], []]
 
         self.fences_remaining = [10, 10]  # fences remaining for player 1, 2
@@ -181,57 +179,57 @@ class Board:
     def get_valid_pawn_moves(self) -> set[tuple[int, int]]:
         val_moves = set()
 
-        row, col = self.pawns[self.curr_player - 1]
-        opp_row, opp_col = self.pawns[self.curr_player % 2]
+        x, y = self.pawns[self.curr_player - 1]
+        x_opp, y_opp = self.pawns[self.curr_player % 2]
 
         # ---- UP ----
-        if not (((row - 1, col, True) in self.fences_flat) or
-                ((row, col, True) in self.fences_flat)):
-            val_moves.add((row - 1, col))
+        if not (((x - 1, y, True) in self.fences_flat) or
+                ((x, y, True) in self.fences_flat)):
+            val_moves.add((x, y + 1))
 
         # ---- DOWN ----
-        if not (((row - 1, col - 1, True) in self.fences_flat) or
-                ((row, col - 1, True) in self.fences_flat)):
-            val_moves.add((row + 1, col))
+        if not (((x - 1, y - 1, True) in self.fences_flat) or
+                ((x, y - 1, True) in self.fences_flat)):
+            val_moves.add((x, y - 1))
 
         # ---- LEFT ----
-        if not (((row - 1, col - 1, False) in self.fences_flat) or
-                ((row - 1, col, False) in self.fences_flat)):
-            val_moves.add((row, col - 1))
+        if not (((x - 1, y - 1, False) in self.fences_flat) or
+                ((x - 1, y, False) in self.fences_flat)):
+            val_moves.add((x - 1, y))
 
         # ---- RIGHT ----
-        if not (((row, col - 1, False) in self.fences_flat) or
-                ((row, col, False) in self.fences_flat)):
-            val_moves.add((row, col + 1))
+        if not (((x, y - 1, False) in self.fences_flat) or
+                ((x, y, False) in self.fences_flat)):
+            val_moves.add((x + 1, y))
 
         # ---- OPPONENT BLOCK / JUMP ----
-        if (opp_row, opp_col) in val_moves:
-            val_moves.discard((opp_row, opp_col))
+        if (x_opp, y_opp) in val_moves:
+            val_moves.discard((x_opp, y_opp))
 
             # jump UP
-            if not (((opp_row - 1, opp_col, True) in self.fences_flat) or
-                    ((opp_row, opp_col, True) in self.fences_flat)):
-                val_moves.add((opp_row - 1, opp_col))
+            if not (((x_opp - 1, y_opp, True) in self.fences_flat) or
+                    ((x_opp, y_opp, True) in self.fences_flat)):
+                val_moves.add((x_opp, y_opp + 1))
 
             # jump DOWN
-            if not (((opp_row - 1, opp_col - 1, True) in self.fences_flat) or
-                    ((opp_row, opp_col - 1, True) in self.fences_flat)):
-                val_moves.add((opp_row + 1, opp_col))
+            if not (((x_opp - 1, y_opp - 1, True) in self.fences_flat) or
+                    ((x_opp, y_opp - 1, True) in self.fences_flat)):
+                val_moves.add((x_opp, y_opp - 1))
 
             # jump LEFT
-            if not (((opp_row - 1, opp_col - 1, False) in self.fences_flat) or
-                    ((opp_row - 1, opp_col, False) in self.fences_flat)):
-                val_moves.add((opp_row, opp_col - 1))
+            if not (((x_opp - 1, y_opp - 1, False) in self.fences_flat) or
+                    ((x_opp - 1, y_opp, False) in self.fences_flat)):
+                val_moves.add((x_opp - 1, y_opp))
 
             # jump RIGHT
-            if not (((opp_row, opp_col - 1, False) in self.fences_flat) or
-                    ((opp_row, opp_col, False) in self.fences_flat)):
-                val_moves.add((opp_row, opp_col + 1))
+            if not (((x_opp, y_opp - 1, False) in self.fences_flat) or
+                    ((x_opp, y_opp, False) in self.fences_flat)):
+                val_moves.add((x_opp + 1, y_opp))
 
         # ---- BOARD BOUNDS ----
         val_moves = {
-            (r, c) for (r, c) in val_moves
-            if 1 <= r <= self.rows and 1 <= c <= self.cols
+            (x, y) for (x, y) in val_moves
+            if 1 <= x <= self.cols and 0 <= y <= self.rows + 1
         }
 
         return val_moves

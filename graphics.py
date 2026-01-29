@@ -1,5 +1,7 @@
-import pygame
 from player import BotPlayer
+from board import Board
+
+import pygame
 
 GRID_SIZE = 9
 CELL_SIZE = 60
@@ -14,7 +16,7 @@ YELLOW = (220, 200, 50)
 GRAY = (180, 180, 180)
 
 
-def draw_board(screen):
+def draw_empty_board(screen):
     screen.fill(WHITE)
 
     for i in range(GRID_SIZE + 1):
@@ -30,14 +32,14 @@ def draw_board(screen):
         )
 
 
-def draw_player(screen, row, col, player):
+def draw_player(screen, row, col, player_no: int, is_bot: bool):
     x = (col - 1) * CELL_SIZE + CELL_SIZE // 2
     y = (row - 1) * CELL_SIZE + CELL_SIZE // 2
 
-    if player.is_bot:
+    if is_bot:
         color = YELLOW
     else:
-        color = RED if player.player_no == 1 else BLUE
+        color = RED if player_no == 1 else BLUE
 
     pygame.draw.circle(screen, color, (x, y), CELL_SIZE // 3)
 
@@ -77,3 +79,6 @@ def draw_win(screen, font, winner_id):
     text = font.render(f"Player {winner_id} wins!", True, BLACK)
     rect = text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
     screen.blit(text, rect)
+
+def draw_board(board: Board):
+    pass
