@@ -12,6 +12,7 @@ BLUE = (50, 80, 220)
 YELLOW = (220, 200, 50)
 GRAY = (180, 180, 180)
 
+
 def draw_board(screen):
     screen.fill(WHITE)
 
@@ -27,6 +28,7 @@ def draw_board(screen):
             (i * CELL_SIZE, GRID_SIZE * CELL_SIZE)
         )
 
+
 def draw_player(screen, row, col, player):
     x = col * CELL_SIZE + CELL_SIZE // 2
     y = row * CELL_SIZE + CELL_SIZE // 2
@@ -37,6 +39,7 @@ def draw_player(screen, row, col, player):
         color = RED if player.player_no == 1 else BLUE
 
     pygame.draw.circle(screen, color, (x, y), CELL_SIZE // 3)
+
 
 def draw_fence(screen, row, col, direction, player):
     color = RED if player.player_no == 1 else BLUE
@@ -58,16 +61,6 @@ def draw_fence(screen, row, col, direction, player):
 
     pygame.draw.rect(screen, color, rect)
 
-#
-'''
-def draw_ui(screen, players, font):
-    y = GRID_SIZE * CELL_SIZE + 10
-    for p in players:
-        text = f"Player {p.player_no} fences: {p.fences_remaining}"
-        color = RED if p.player_no == 1 else BLUE
-        label = font.render(text, True, color)
-        screen.blit(label, (20 + (p.player_no - 1) * 250, y))
-'''
 
 def draw_win(screen, font, winner_id):
     screen.fill(WHITE)

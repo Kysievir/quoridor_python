@@ -1,106 +1,89 @@
+import sys
 import pygame
-from board import Board
-from actions import MovePawn, PlaceFence
+from client import QuoridorClient
+from server import QuoridorServer
+from actions import MovePawn
 from player import HumanPlayer, BotPlayer
-from game import Game
-
 from graphics import (
-    WIDTH, HEIGHT, CELL_SIZE,
-    draw_board, draw_player,
-    draw_fence, draw_win
+    WIDTH, HEIGHT, CELL_SIZE, RED, BLUE, BLACK,
+    draw_board, draw_player
 )
 
-def choose_game_mode():
-    print("Choose game mode:")
-    print("1 - Human vs Human")
-    print("2 - Human vs Bot")
 
-    while True:
-        choice = input("Enter 1 or 2: ")
-        if choice == "1":
-            return "HUMAN_HUMAN"
-        elif choice == "2":
-            return "HUMAN_BOT"
+def run_server():
+    server = QuoridorServer()
+    server.run()
 
-def main():
-    mode = choose_game_mode()
+
+def run_client():
+    client = QuoridorClient()
+    if not client.connect():
+        print("Server not found! Run 'python main.py server' first.")
+        return
 
     pygame.init()
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
-    pygame.display.set_caption("Quoridor")
+    pygame.display.set_caption("Quoridor Multiplayer")
     clock = pygame.time.Clock()
-    font = pygame.font.SysFont(None, 32)
-
-    if mode == "HUMAN_HUMAN":
-        players = [HumanPlayer(1), HumanPlayer(2)]
-    else:
-        players = [HumanPlayer(1), BotPlayer(2)]
-
-    game = Game(players)
-    board = game.board
+    font = pygame.font.SysFont(None, 36)
 
     running = True
-
     while running:
         clock.tick(60)
+        board = client.board
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
 
-            # Mouse = place fence
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                mx, my = pygame.mouse.get_pos()
-                col = mx // CELL_SIZE
-                row = my // CELL_SIZE
-                direction = "H" if event.button == 1 else "V"
-                #game.handle_action(PlaceFence(row, col, direction))
+            if event.type == pygame.KEYDOWN and board.curr_player == client.player_id:
+                r, c = board.p1_pawn if client.player_id == 1 else board.p2_pawn
+                move = None
+                if event.key == pygame.K_UP:
+                    move = (r - 1, c)
+                elif event.key == pygame.K_DOWN:
+                    move = (r + 1, c)
+                elif event.key == pygame.K_LEFT:
+                    move = (r, c - 1)
+                elif event.key == pygame.K_RIGHT:
+                    move = (r, c + 1)
 
-        # Keyboard = move pawn
-        '''
-        keys = pygame.key.get_pressed()
-        if keys[pygame.K_UP]:
-            game.handle_action(MovePawn(-1, 0))
-        elif keys[pygame.K_DOWN]:
-            game.handle_action(MovePawn(1, 0))
-        elif keys[pygame.K_LEFT]:
-            game.handle_action(MovePawn(0, -1))
-        elif keys[pygame.K_RIGHT]:
-            game.handle_action(MovePawn(0, 1))
-        '''
-        # handle_action does not exist
-            
+                if move and move in board.get_valid_pawn_moves():
+                    client.send_action(MovePawn(move[0], move[1]))
+
         draw_board(screen)
 
-        # Draw pawns
-        r, c = board.p1_pawn
-        draw_player(screen, r, c, players[0])
+        # Turn Indicator
+        turn_color = RED if board.curr_player == 1 else BLUE
+        turn_text = f"Player {board.curr_player}'s Turn"
+        if board.curr_player == client.player_id:
+            turn_text += " (YOU)"
 
-        r, c = board.p2_pawn
-        draw_player(screen, r, c, players[1])
+        text_surf = font.render(turn_text, True, turn_color)
+        screen.blit(text_surf, (20, HEIGHT - 60))
 
-        # Draw fences
-        '''
-        for fence in board.fences:
-            row, col, direction, player = fence
-            draw_fence(screen, row, col, direction, player)
-        '''
+        # ID Indicator
+        id_text = font.render(
+            f"You are Player {client.player_id}", True, BLACK)
+        screen.blit(id_text, (20, HEIGHT - 30))
 
-        #draw_ui(screen, players, font)
+        p1_r, p1_c = board.p1_pawn
+        draw_player(screen, p1_r, p1_c, HumanPlayer(1))
 
-        # Win check (check_winner() doesn't exist)
-        '''
-        winner = board.check_winner()
-        if winner:
-            draw_win(screen, font, winner)
-            pygame.display.flip()
-            pygame.time.wait(3000)
-            break
-        '''
+        p2_r, p2_c = board.p2_pawn
+        is_bot = (client.mode == "HUMAN_BOT")
+        draw_player(screen, p2_r, p2_c, BotPlayer(2)
+                    if is_bot else HumanPlayer(2))
 
         pygame.display.flip()
 
     pygame.quit()
 
+
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) < 2:
+        print("Usage: python main.py [server|client]")
+    elif sys.argv[1].lower() == "server":
+        run_server()
+    elif sys.argv[1].lower() == "client":
+        run_client()

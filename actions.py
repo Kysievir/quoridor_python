@@ -1,6 +1,7 @@
 class Action:
     pass
 
+
 class MovePawn(Action):
     def __init__(self, x, y):
         """
@@ -11,7 +12,8 @@ class MovePawn(Action):
             y: y coordinate, from 0 to 10 if the board is standard
         """
         self.x = x
-        self.y = y 
+        self.y = y
+
 
 class PlaceFence(Action):
     def __init__(self, x, y, direction):
