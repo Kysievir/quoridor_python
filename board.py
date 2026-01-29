@@ -2,10 +2,15 @@ from actions import Action, MovePawn, PlaceFence
 from mcts import StateInterface
 
 from igraph import Graph
+import json
 
 # TODO: Saving and initializing from a board position
 class Board:
-    def __init__(self, rows=9, cols=9):
+    def __init__(self, rows=9, cols=9, data: dict=None):
+        if data is not None:
+            self._from_dict(data)
+            return
+        
         self.curr_player = 1
         self.is_terminal = False
         self.winner = None
@@ -42,8 +47,43 @@ class Board:
         self.graph = Graph(edges=edges, directed=False)
         self.graph.vs["name"] = vertices
 
-        # TODO: Should each player's number of remaining fences be tracked here?
+    def _from_dict(self, data: dict):
+        self.curr_player = data["curr_player"]
+        self.is_terminal = data["is_terminal"]
+        self.winner = data["winner"]
+        self.rows = data["rows"]
+        self.cols = data["cols"]
 
+        self.pawns = data["pawns"]
+        self.fences = data["fences"]
+        self.fences_flat = self.fences[0] + self.fences[1]
+        
+        self.valid_fence_placements = data["valid_fence_placements"]
+
+        gdata = data["graph"]
+        self.graph = Graph(n=len(gdata["vertices"]), edges=gdata["edges"], directed=False)
+        self.graph.vs["name"] = gdata["vertices"]
+
+    def to_dict(self) -> dict:
+        data = {}
+
+        data["curr_player"] = self.curr_player
+        data["is_terminal"] = self.is_terminal
+        data["winner"] = self.winner
+        data["rows"] = self.rows
+        data["cols"] = self.cols
+
+        data["pawns"] = self.pawns 
+        data["fences"] = self.fences
+        
+        # NOTE: Ideally this should be internally calculated.
+        data["valid_fence_placements"] = list(self.valid_fence_placements)
+        data["graph"] = {
+            "vertices": self.graph.vs["name"],
+            "edges": list(self.graph.es)
+        }
+
+        return data
     
     def move_pawn(self, x, y):
         """Cannot handle invalid moves, which should've been checked."""
@@ -83,7 +123,6 @@ class Board:
         self._discard_disconnecting_fences()
 
     def _discard_disconnecting_fences(self):
-
         for placement in self.valid_fence_placements:
             graph_copy = self.graph.copy()
             x, y, dir = placement
@@ -216,7 +255,7 @@ class Board:
             self.curr_player = self.curr_player % 2 + 1
 
 # Wrapper class for MCTS integration
-class BoardWrapper(StateInterface):
+class BoardState(StateInterface):
     def __init__(self, board: Board):
         self.board = board
     
