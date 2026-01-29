@@ -1,4 +1,5 @@
 from actions import Action, MovePawn, PlaceFence
+from mcts import StateInterface
 
 from igraph import Graph
 
@@ -10,11 +11,18 @@ class Board:
         self.winner = None
         self.rows = rows
         self.cols = cols
+
+        # TODO: Combine p1/p2 properties to one.
         self.p1_pawn = (1, (cols + 1) /  2)
         self.p2_pawn = (rows, (cols + 1) / 2)
         self.p1_fences = []
         self.p2_fences = []
-        self.fences = []
+
+        self.pawns = [(1, (cols + 1) /  2), (rows, (cols + 1) / 2)]
+        self.fences = [[], []]
+
+        self.fences_remaining = [10, 10]  # fences remaining for player 1, 2
+        self.fences_flat = []
         self.valid_fence_placements = {
             (x, y, True) for x in range(1, cols) for y in range(1, rows)
         } | {
@@ -25,10 +33,10 @@ class Board:
         vertices = [(x, y) for x in range(1, cols + 1) for y in range(1, rows + 1)]
         vertex_id = {v: i for i, v in enumerate(vertices)}
 
-        edges = [(vertex_id((i, j)), vertex_id((i + 1, j))) 
+        edges = [(vertex_id[(i, j)], vertex_id[(i + 1, j)]) 
                  for i in range(1, cols) for j in range(1, rows + 1)]
         
-        edges += [(vertex_id((i, j)), vertex_id((i, j + 1))) 
+        edges += [(vertex_id[(i, j)], vertex_id[(i, j + 1)]) 
                  for i in range(1, cols + 1) for j in range(1, rows)]
 
         self.graph = Graph(edges=edges, directed=False)
@@ -38,18 +46,24 @@ class Board:
 
     
     def move_pawn(self, x, y):
+        """Cannot handle invalid moves, which should've been checked."""
+        # TODO: Remove this
         if self.curr_player == 1:
             self.p1_pawn = (x, y)
         elif self.curr_player == 2:
             self.p2_pawn = (x, y)
+        
+        self.pawns[self.curr_player - 1] = (x, y)
 
     def place_fence(self, x, y, direction):
+        """Cannot handle invalid placements, which should've been checked."""
         if self.curr_player == 1:
-            self.p1_fences.append((x, y, direction))
+            self.fences[0].append((x, y, direction))
         elif self.curr_player == 2:
-            self.p2_fences.append((x, y, direction))
+            self.fences[1].append((x, y, direction))
         
-        self.fences.append((x, y, direction))
+        self.fences_flat.append((x, y, direction))
+        self.fences_remaining[self.curr_player - 1] -= 1
 
         blocked_placements = {(x, y, direction), (x, y, ~direction)}
         if direction:
@@ -65,51 +79,53 @@ class Board:
                 (self.graph.vs.find(name=(x + 1, y)),
                  self.graph.vs.find(name=(x + 1, y + 1)))
             ])
+        
+        self._discard_disconnecting_fences()
 
     def get_valid_pawn_moves(self) -> set[tuple[int, int]]:
         val_moves = set()
         if self.curr_player == 1:
-            x, y = self.p1_pawn
-            x_opp, y_opp = self.p2_pawn
+            x, y = self.pawns[0]
+            x_opp, y_opp = self.pawns[1]
         elif self.curr_player == 2:
-            x, y = self.p2_pawn
-            x_opp, y_opp = self.p1_pawn
+            x, y = self.pawns[0]
+            x_opp, y_opp = self.pawns[1]
 
         # Potentially allowing move-up/down/left/right respectively
-        if not (((x - 1, y, True) in self.fences) 
-                or ((x, y, True) in self.fences)):
+        if not (((x - 1, y, True) in self.fences_flat) 
+                or ((x, y, True) in self.fences_flat)):
             val_moves.add((x, y + 1))
         
-        if not (((x - 1, y - 1) in self.fences) 
-                or ((x, y - 1) in self.fences)):
+        if not (((x - 1, y - 1) in self.fences_flat) 
+                or ((x, y - 1) in self.fences_flat)):
             val_moves.add((x, y - 1))
 
-        if not (((x - 1, y) in self.fences) 
-                or ((x - 1, y - 1) in self.fences)):
+        if not (((x - 1, y) in self.fences_flat) 
+                or ((x - 1, y - 1) in self.fences_flat)):
             val_moves.add((x - 1, y))
         
-        if not (((x, y) in self.fences) 
-                or ((x, y - 1) in self.fences)):
+        if not (((x, y) in self.fences_flat) 
+                or ((x, y - 1) in self.fences_flat)):
             val_moves.add((x + 1, y))
         
         if (x_opp, y_opp) in val_moves:
             val_moves.dicard((x_opp, y_opp))
 
             # Potentially allowing move-up/down/left/right from opponent respectively
-            if not (((x_opp - 1, y_opp, True) in self.fences) 
-                    or ((x_opp, y_opp, True) in self.fences)):
+            if not (((x_opp - 1, y_opp, True) in self.fences_flat) 
+                    or ((x_opp, y_opp, True) in self.fences_flat)):
                 val_moves.add((x_opp, y_opp + 1))
             
-            if not (((x_opp - 1, y_opp - 1) in self.fences) 
-                    or ((x_opp, y_opp - 1) in self.fences)):
+            if not (((x_opp - 1, y_opp - 1) in self.fences_flat) 
+                    or ((x_opp, y_opp - 1) in self.fences_flat)):
                 val_moves.add((x_opp, y_opp - 1))
 
-            if not (((x_opp - 1, y_opp) in self.fences) 
-                    or ((x_opp - 1, y_opp - 1) in self.fences)):
+            if not (((x_opp - 1, y_opp) in self.fences_flat) 
+                    or ((x_opp - 1, y_opp - 1) in self.fences_flat)):
                 val_moves.add((x_opp - 1, y_opp))
             
-            if not (((x_opp, y_opp) in self.fences) 
-                    or ((x_opp, y_opp - 1) in self.fences)):
+            if not (((x_opp, y_opp) in self.fences_flat) 
+                    or ((x_opp, y_opp - 1) in self.fences_flat)):
                 val_moves.add((x_opp + 1, y_opp))
         
 
@@ -118,33 +134,55 @@ class Board:
         
         return val_moves
     
-    def get_valid_fence_placements(self) -> set[tuple[int, int, bool]]:
+    def _discard_disconnecting_fences(self) -> set[tuple[int, int, bool]]:
 
         # TODO: Ensure the board is not totally divided.
         # Use igraph all_minimal_st_separators to check each separator of size <= 2
-        
-        seps = self.graph.all_minimal_st_separators()
-        two_vertex_seps = []
-        one_vertex_seps = []
-        for sep in seps:  # sep is a set of vertices
-            if len(sep) == 2:
-                two_vertex_seps.append(list(map(Board._vertex_id_to_name, sep)))
-            elif len(sep) == 1:
-                one_vertex_seps.append(Board._vertex_id_to_name(sep.pop()))
-        
-        two_vertex_seps = [sep for sep in two_vertex_seps 
-                           if Board._are_adjacent_cells(sep[0], sep[1])]
-        
-        # Almost done. This is getting complicated. Maybe check one by one instead.
-        
 
-    @staticmethod 
-    def _are_adjacent_cells(coord_1, coord_2) -> bool:
-        pass
+        for placement in self.valid_fence_placements:
+            graph_copy = self.graph.copy()
+            x, y, dir = placement
+            if dir:
+                graph_copy.delete_edges([
+                    (graph_copy.vs.find(name=(x, y)),
+                     graph_copy.vs.find(name=(x, y + 1))),
+                    (graph_copy.vs.find(name=(x + 1, y)),
+                     graph_copy.vs.find(name=(x + 1, y + 1)))
+                ])
+            else:
+                graph_copy.delete_edges([
+                    (graph_copy.vs.find(name=(x, y)),
+                     graph_copy.vs.find(name=(x + 1, y))),
+                    (graph_copy.vs.find(name=(x, y + 1)),
+                     graph_copy.vs.find(name=(x + 1, y + 1)))
+                ])
+            
+            final_y = 10 if self.curr_player == 1 else 0
+            components = graph_copy.connected_components(mode="weak")
+            membership = components.membership
+            pawn_membership = membership[graph_copy.vs.find(name=self.pawns[self.curr_player - 1])]
 
-    @staticmethod
-    def _vertex_id_to_name(vertex_id: int) -> tuple[int, int]:
-        pass
+            if not any((membership[graph_copy.vs.find(name=(x, final_y))] == pawn_membership
+                        for x in range(1, 10))):
+                self.valid_fence_placements.discard(placement)
+            
+        # # An alternative method with igraph all_minimal_st_separators
+        # # It should be faster, but finding the corresponding fences gets too complicated.
+        # seps = self.graph.all_minimal_st_separators()
+        # two_vertex_seps = []
+        # one_vertex_seps = []
+        # for sep in seps:  # sep is a set of vertices
+        #     if len(sep) == 2:
+        #         two_vertex_seps.append(list(map(Board._vertex_id_to_name, sep)))
+        #     elif len(sep) == 1:
+        #         one_vertex_seps.append(Board._vertex_id_to_name(sep.pop()))
+        
+        # two_vertex_seps = [sep for sep in two_vertex_seps 
+        #                    if Board._are_adjacent_cells(sep[0], sep[1])]
+        # STILL NOT WORKING
+
+    def get_valid_fence_placement(self):
+        return self.valid_fence_placements
 
     def update(self, action: Action):
         if isinstance(action, MovePawn):
@@ -168,11 +206,40 @@ class Board:
 
         # P1 wins if they reach the last row (index 8)
         # P2 wins if they reach the first row (index 0)
-        if (self.p1_pawn[0] == self.rows - 1) or (self.p2_pawn[0] == 0):
+        if (self.pawns[0][0] == self.rows - 1):
             self.winner = 1
             self.is_terminal = True
-        elif self.p2_pawn[0] == 0:
+        elif self.pawns[1][0] == 0:
             self.winner = 2
             self.is_terminal = True
 
         self.curr_player = self.curr_player % 2 + 1
+
+# Wrapper class for MCTS integration
+class BoardWrapper(StateInterface):
+    def __init__(self, board: Board):
+        self.board = board
+    
+    def get_current_player(self) -> int:
+        return 1 if self.board.curr_player == 1 else -1
+    
+    def get_possible_actions(self) -> list[Action]:
+        actions = []
+        actions += [MovePawn(x, y) 
+                    for x, y in self.board.get_valid_pawn_moves()]
+        actions += [PlaceFence(x, y, dir) 
+                    for x, y, dir in self.board.get_valid_fence_placements()]
+        return actions
+
+    def take_action(self, action: Action):
+        self.board.update(action)
+
+    def is_terminal(self):
+        return self.board.is_terminal
+
+    def get_reward(self):
+        # only needed for terminal states
+        if self.is_terminal():
+            return 1 if self.board.winner == 1 else -1
+        else:
+            return 0
