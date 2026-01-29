@@ -5,7 +5,7 @@ from igraph import Graph
 # TODO: Saving and initializing from a board position
 class Board:
     def __init__(self, rows=9, cols=9):
-        self.curr_player = 0
+        self.curr_player = 1
         self.is_terminal = False
         self.rows = rows
         self.cols = cols
@@ -40,8 +40,8 @@ class Board:
         if self.curr_player == 1:
             self.p1_pawn = (x, y)
         elif self.curr_player == 2:
-            self.p2_pawn == (x, y)
-    
+            self.p2_pawn = (x, y)
+            
     def place_fence(self, x, y, direction):
         if self.curr_player == 1:
             self.p1_fences.append((x, y, direction))
@@ -57,7 +57,6 @@ class Board:
             blocked_placements |= {(x, y - 1, direction), (x, y + 1, direction)}
 
         self.valid_fence_placements -= blocked_placements
-
         if direction:
             self.graph.delete_edges([
                 (self.graph.vs.find(name=(x, y)),
@@ -68,54 +67,12 @@ class Board:
 
     def get_valid_pawn_moves(self) -> set[tuple[int, int]]:
         val_moves = set()
-        if self.curr_player == 1:
-            x, y = self.p1_pawn
-            x_opp, y_opp = self.p2_pawn
-        elif self.curr_player == 2:
-            x, y = self.p2_pawn
-            x_opp, y_opp = self.p1_pawn
+        x, y = self.p1_pawn if self.curr_player == 1 else self.p2_pawn
 
-        # Potentially allowing move-up/down/left/right respectively
-        if not (((x - 1, y, True) in self.fences) 
-                or ((x, y, True) in self.fences)):
-            val_moves.add((x, y + 1))
-        
-        if not (((x - 1, y - 1) in self.fences) 
-                or ((x, y - 1) in self.fences)):
-            val_moves.add((x, y - 1))
-
-        if not (((x - 1, y) in self.fences) 
-                or ((x - 1, y - 1) in self.fences)):
-            val_moves.add((x - 1, y))
-        
-        if not (((x, y) in self.fences) 
-                or ((x, y - 1) in self.fences)):
-            val_moves.add((x + 1, y))
-        
-        if (x_opp, y_opp) in val_moves:
-            val_moves.dicard((x_opp, y_opp))
-
-            # Potentially allowing move-up/down/left/right from opponent respectively
-            if not (((x_opp - 1, y_opp, True) in self.fences) 
-                    or ((x_opp, y_opp, True) in self.fences)):
-                val_moves.add((x_opp, y_opp + 1))
-            
-            if not (((x_opp - 1, y_opp - 1) in self.fences) 
-                    or ((x_opp, y_opp - 1) in self.fences)):
-                val_moves.add((x_opp, y_opp - 1))
-
-            if not (((x_opp - 1, y_opp) in self.fences) 
-                    or ((x_opp - 1, y_opp - 1) in self.fences)):
-                val_moves.add((x_opp - 1, y_opp))
-            
-            if not (((x_opp, y_opp) in self.fences) 
-                    or ((x_opp, y_opp - 1) in self.fences)):
-                val_moves.add((x_opp + 1, y_opp))
-        
-
-        val_moves = {move for move in val_moves 
-                     if (move[0] > 0 and move[0] <= self.cols)}
-
+        for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+            nx, ny = x + dx, y + dy
+            if 0 <= nx < self.rows and 0 <= ny < self.cols:
+                val_moves.add((nx, ny))
         return val_moves
     
     def get_valid_fence_placements(self) -> set[tuple[int, int, bool]]:
@@ -148,25 +105,12 @@ class Board:
 
     def update(self, action: Action):
         if isinstance(action, MovePawn):
-            x = action.x
-            y = action.y
-            if (x, y) not in self.get_valid_pawn_moves():
-                raise ValueError("Invalid pawn move")
-            
-            self.move_pawn(x, y)
+            self.move_pawn(action.x, action.y)
 
-        elif isinstance(action, PlaceFence):
-            x = action.x
-            y = action.y
-            direction = action.direction
-            if (x, y, direction) not in self.get_valid_fence_placements():
-                raise ValueError("Invalid fence placement")
-            
-            self.place_fence(action.x, action.y, action.direction)
-        
-        # Check if the game has ended.
-        if (self.p1_pawn[1] == 10) or (self.p2_pawn[1] == 0):
+        # P1 wins if they reach the last row (index 8)
+        # P2 wins if they reach the first row (index 0)
+        if (self.p1_pawn[0] == self.rows - 1) or (self.p2_pawn[0] == 0):
             self.is_terminal = True
             return
-        
-        self.curr_player = self.curr_player % 2 + 1
+
+        self.curr_player = 2 if self.curr_player == 1 else 1
