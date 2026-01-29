@@ -1,33 +1,17 @@
 from mcts import MCTS, StateInterface, ActionInterface
-from board import Board
+from board import Board, BoardState
 from actions import Action, MovePawn, PlaceFence
+from player import Player
 
-class BoardWrapper(StateInterface):
-    def __init__(self, board: Board):
-        self.board = board
-    
-    def get_current_player(self) -> int:
-        return 1 if self.board.curr_player == 1 else -1
-    
-    def get_possible_actions(self) -> list[Action]:
-        actions = []
-        actions += [MovePawn(x, y) 
-                    for x, y in self.board.get_valid_pawn_moves()]
-        
-        actions += [PlaceFence(x, y, dir) 
-                    for x, y, dir in self.board.get_valid_fence_placements()]
-        return actions
+class BotPlayer(Player):
+    def __init__(self, player_no, name=None):
+        super().__init__(player_no, name)
+        self.is_bot = True
 
-    def take_action(self, action: Action):
-        self.board.update(action)
+    def play(self, board: Board):
+        board_state = BoardState(board)
+        mcts = MCTS(time_limit=5)  # time_limit is in seconds
+        action = mcts.search(initial_state=board_state)
 
-    def is_terminal(self):
-        return self.board.is_terminal
-
-    def get_reward(self):
-        # only needed for terminal states
-        if self.is_terminal():
-            return 1 if self.board.winner == 1 else -1
-        else:
-            return 0
+        return action
     
