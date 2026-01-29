@@ -1,3 +1,6 @@
+from player import BotPlayer
+from board import Board
+
 import pygame
 
 GRID_SIZE = 9
@@ -13,7 +16,7 @@ YELLOW = (220, 200, 50)
 GRAY = (180, 180, 180)
 
 
-def draw_board(screen):
+def draw_empty_board(screen):
     screen.fill(WHITE)
 
     for i in range(GRID_SIZE + 1):
@@ -29,32 +32,41 @@ def draw_board(screen):
         )
 
 
-def draw_player(screen, row, col, player):
-    x = col * CELL_SIZE + CELL_SIZE // 2
-    y = row * CELL_SIZE + CELL_SIZE // 2
+def draw_player(screen, row, col, player_no: int, is_bot: bool):
+    x = (col - 1) * CELL_SIZE + CELL_SIZE // 2
+    y = (row - 1) * CELL_SIZE + CELL_SIZE // 2
 
-    if player.is_bot:
+    if is_bot:
         color = YELLOW
     else:
-        color = RED if player.player_no == 1 else BLUE
+        color = RED if player_no == 1 else BLUE
 
     pygame.draw.circle(screen, color, (x, y), CELL_SIZE // 3)
 
 
-def draw_fence(screen, row, col, direction, player):
-    color = RED if player.player_no == 1 else BLUE
+def draw_fence(screen, row, col, direction, owner, is_bot=False):
+    if owner == 1:
+        color = RED
+    elif owner == 2 and is_bot:
+        color = YELLOW
+    else:
+        color = BLUE
 
-    if direction == "H":
+    # Convert board coords (1–8) → pixel coords
+    px = (col - 1) * CELL_SIZE
+    py = (row - 1) * CELL_SIZE
+
+    if direction:  # horizontal
         rect = pygame.Rect(
-            col * CELL_SIZE,
-            row * CELL_SIZE - 5,
+            px,
+            py + CELL_SIZE - 5,
             CELL_SIZE * 2,
             10
         )
-    else:  # "V"
+    else:  # vertical
         rect = pygame.Rect(
-            col * CELL_SIZE - 5,
-            row * CELL_SIZE,
+            px + CELL_SIZE - 5,
+            py,
             10,
             CELL_SIZE * 2
         )
@@ -67,3 +79,6 @@ def draw_win(screen, font, winner_id):
     text = font.render(f"Player {winner_id} wins!", True, BLACK)
     rect = text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
     screen.blit(text, rect)
+
+def draw_board(board: Board):
+    pass

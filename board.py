@@ -18,12 +18,10 @@ class Board:
         self.cols = cols
 
         # TODO: Combine p1/p2 properties to one.
-        self.p1_pawn = (1, (cols + 1) /  2)
-        self.p2_pawn = (rows, (cols + 1) / 2)
         self.p1_fences = []
         self.p2_fences = []
 
-        self.pawns = [(1, (cols + 1) /  2), (rows, (cols + 1) / 2)]
+        self.pawns = [((cols + 1) // 2, 1), ((cols + 1) // 2, rows)]
         self.fences = [[], []]
 
         self.fences_remaining = [10, 10]  # fences remaining for player 1, 2
@@ -85,8 +83,9 @@ class Board:
 
         return data
     
-    def move_pawn(self, x, y):
+    def move_pawn(self, row, col):
         """Cannot handle invalid moves, which should've been checked."""
+        """
         # TODO: Remove this
         if self.curr_player == 1:
             self.p1_pawn = (x, y)
@@ -94,9 +93,12 @@ class Board:
             self.p2_pawn = (x, y)
         
         self.pawns[self.curr_player - 1] = (x, y)
+        """
+        self.pawns[self.curr_player - 1] = (row, col)
 
     def place_fence(self, x, y, direction):
         """Cannot handle invalid placements, which should've been checked."""
+        print("Fence placed:", x, y, direction)
         if self.curr_player == 1:
             self.fences[0].append((x, y, direction))
         elif self.curr_player == 2:
@@ -105,7 +107,7 @@ class Board:
         self.fences_flat.append((x, y, direction))
         self.fences_remaining[self.curr_player - 1] -= 1
 
-        blocked_placements = {(x, y, direction), (x, y, ~direction)}
+        blocked_placements = {(x, y, direction), (x, y, not direction)}
         if direction:
             blocked_placements |= {(x - 1, y, direction), (x + 1, y, direction)}
         else:
@@ -119,6 +121,14 @@ class Board:
                 (self.graph.vs.find(name=(x + 1, y)),
                  self.graph.vs.find(name=(x + 1, y + 1)))
             ])
+        else: # attemp to fix pawn walking through fences
+            self.graph.delete_edges([
+                (self.graph.vs.find(name=(x, y)),
+                self.graph.vs.find(name=(x + 1, y))),
+                (self.graph.vs.find(name=(x, y + 1)),
+                self.graph.vs.find(name=(x + 1, y + 1)))
+            ])
+
         
         self._discard_disconnecting_fences()
 
@@ -168,55 +178,62 @@ class Board:
 
     def get_valid_pawn_moves(self) -> set[tuple[int, int]]:
         val_moves = set()
-        if self.curr_player == 1:
-            x, y = self.pawns[0]
-            x_opp, y_opp = self.pawns[1]
-        elif self.curr_player == 2:
-            x, y = self.pawns[0]
-            x_opp, y_opp = self.pawns[1]
 
-        # Potentially allowing move-up/down/left/right respectively
-        if not (((x - 1, y, True) in self.fences_flat) 
-                or ((x, y, True) in self.fences_flat)):
+        x, y = self.pawns[self.curr_player - 1]
+        x_opp, y_opp = self.pawns[self.curr_player % 2]
+
+        # ---- UP ----
+        if not (((x - 1, y, True) in self.fences_flat) or
+                ((x, y, True) in self.fences_flat)):
             val_moves.add((x, y + 1))
-        
-        if not (((x - 1, y - 1, True) in self.fences_flat) 
-                or ((x, y - 1, True) in self.fences_flat)):
+
+        # ---- DOWN ----
+        if not (((x - 1, y - 1, True) in self.fences_flat) or
+                ((x, y - 1, True) in self.fences_flat)):
             val_moves.add((x, y - 1))
 
-        if not (((x - 1, y, False) in self.fences_flat) 
-                or ((x - 1, y - 1, False) in self.fences_flat)):
+        # ---- LEFT ----
+        if not (((x - 1, y - 1, False) in self.fences_flat) or
+                ((x - 1, y, False) in self.fences_flat)):
             val_moves.add((x - 1, y))
-        
-        if not (((x, y, False) in self.fences_flat) 
-                or ((x, y - 1, False) in self.fences_flat)):
-            val_moves.add((x + 1, y))
-        
-        if (x_opp, y_opp) in val_moves:
-            val_moves.dicard((x_opp, y_opp))
 
-            # Potentially allowing move-up/down/left/right from opponent respectively
-            if not (((x_opp - 1, y_opp, True) in self.fences_flat) 
-                    or ((x_opp, y_opp, True) in self.fences_flat)):
+        # ---- RIGHT ----
+        if not (((x, y - 1, False) in self.fences_flat) or
+                ((x, y, False) in self.fences_flat)):
+            val_moves.add((x + 1, y))
+
+        # ---- OPPONENT BLOCK / JUMP ----
+        if (x_opp, y_opp) in val_moves:
+            val_moves.discard((x_opp, y_opp))
+
+            # jump UP
+            if not (((x_opp - 1, y_opp, True) in self.fences_flat) or
+                    ((x_opp, y_opp, True) in self.fences_flat)):
                 val_moves.add((x_opp, y_opp + 1))
-            
-            if not (((x_opp - 1, y_opp - 1, True) in self.fences_flat) 
-                    or ((x_opp, y_opp - 1, True) in self.fences_flat)):
+
+            # jump DOWN
+            if not (((x_opp - 1, y_opp - 1, True) in self.fences_flat) or
+                    ((x_opp, y_opp - 1, True) in self.fences_flat)):
                 val_moves.add((x_opp, y_opp - 1))
 
-            if not (((x_opp - 1, y_opp, False) in self.fences_flat) 
-                    or ((x_opp - 1, y_opp - 1, False) in self.fences_flat)):
+            # jump LEFT
+            if not (((x_opp - 1, y_opp - 1, False) in self.fences_flat) or
+                    ((x_opp - 1, y_opp, False) in self.fences_flat)):
                 val_moves.add((x_opp - 1, y_opp))
-            
-            if not (((x_opp, y_opp, False) in self.fences_flat) 
-                    or ((x_opp, y_opp - 1, False) in self.fences_flat)):
-                val_moves.add((x_opp + 1, y_opp))
-        
 
-        val_moves = {move for move in val_moves 
-                     if (move[0] > 0 and move[0] <= self.cols)}
-        
+            # jump RIGHT
+            if not (((x_opp, y_opp - 1, False) in self.fences_flat) or
+                    ((x_opp, y_opp, False) in self.fences_flat)):
+                val_moves.add((x_opp + 1, y_opp))
+
+        # ---- BOARD BOUNDS ----
+        val_moves = {
+            (x, y) for (x, y) in val_moves
+            if 1 <= x <= self.cols and 0 <= y <= self.rows + 1
+        }
+
         return val_moves
+
 
     def get_valid_fence_placements(self) -> set[tuple[int, int, bool]]:
         if self.fences_remaining[self.curr_player - 1] > 0:
@@ -245,10 +262,10 @@ class Board:
 
         # P1 wins if they reach the last row (index 10 normally)
         # P2 wins if they reach the first row (index 0 normally)
-        if (self.pawns[0][0] == self.rows + 1):
+        if (self.pawns[0][0] == self.rows):
             self.winner = 1
             self.is_terminal = True
-        elif self.pawns[1][0] == 0:
+        elif self.pawns[1][0] == 1:
             self.winner = 2
             self.is_terminal = True
         else:
