@@ -25,13 +25,6 @@ class StateInterface():
         raise NotImplementedError()
 
 
-class ActionInterface():
-    def __eq__(self, other):
-        raise NotImplementedError
-
-    def __hash__(self):
-        raise NotImplementedError()
-
 def random_policy(state):
     while not state.isTerminal():
         try:
@@ -54,47 +47,47 @@ class TreeNode():
 
     def __str__(self):
         s=[]
-        s.append("totalReward: %s"%(self.totalReward))
-        s.append("numVisits: %d"%(self.numVisits))
-        s.append("isTerminal: %s"%(self.isTerminal))
-        s.append("possibleActions: %s"%(self.children.keys()))
+        s.append("total_reward: %s"%(self.total_reward))
+        s.append("num_visits: %d"%(self.num_visits))
+        s.append("is_terminal: %s"%(self.is_terminal))
+        s.append("possible_actions: %s"%(self.children.keys()))
         return "%s: {%s}"%(self.__class__.__name__, ', '.join(s))
 
 class MCTS():
-    def __init__(self, timeLimit=None, iterationLimit=None, explorationConstant=1 / math.sqrt(2),
-                 rolloutPolicy=random_policy):
-        if timeLimit != None:
-            if iterationLimit != None:
+    def __init__(self, time_limit=None, iteration_limit=None, exploration_constant=1 / math.sqrt(2),
+                 rollout_policy=random_policy):
+        if time_limit != None:
+            if iteration_limit != None:
                 raise ValueError("Cannot have both a time limit and an iteration limit")
             # time taken for each MCTS search in milliseconds
-            self.timeLimit = timeLimit
+            self.timeLimit = time_limit
             self.limitType = 'time'
         else:
-            if iterationLimit == None:
+            if iteration_limit == None:
                 raise ValueError("Must have either a time limit or an iteration limit")
             # number of iterations of the search
-            if iterationLimit < 1:
+            if iteration_limit < 1:
                 raise ValueError("Iteration limit must be greater than one")
-            self.searchLimit = iterationLimit
-            self.limitType = 'iterations'
-        self.explorationConstant = explorationConstant
-        self.rollout = rolloutPolicy
+            self.search_limit = iteration_limit
+            self.limit_type = 'iterations'
+        self.exploration_constant = exploration_constant
+        self.rollout = rollout_policy
 
-    def search(self, initialState, needDetails=False):
-        self.root = TreeNode(initialState, None)
+    def search(self, initial_state, need_details=False):
+        self.root = TreeNode(initial_state, None)
 
-        if self.limitType == 'time':
-            timeLimit = time.time() + self.timeLimit / 1000
-            while time.time() < timeLimit:
-                self.executeRound()
+        if self.limit_type == 'time':
+            time_limit = time.time() + self.time_limit / 1000
+            while time.time() < time_limit:
+                self.execute_round()
         else:
-            for i in range(self.searchLimit):
-                self.executeRound()
+            for i in range(self.search_limit):
+                self.execute_round()
 
-        bestChild = self.get_best_child(self.root, 0)
-        action=(action for action, node in self.root.children.items() if node is bestChild).__next__()
-        if needDetails:
-            return {"action": action, "expectedReward": bestChild.totalReward / bestChild.numVisits}
+        best_child = self.get_best_child(self.root, 0)
+        action=(action for action, node in self.root.children.items() if node is best_child).__next__()
+        if need_details:
+            return {"action": action, "expected_reward": best_child.total_reward / best_child.num_visits}
         else:
             return action
 
@@ -107,41 +100,41 @@ class MCTS():
         self.backpropogate(node, reward)
 
     def select_node(self, node):
-        while not node.isTerminal:
-            if node.isFullyExpanded:
-                node = self.getBestChild(node, self.explorationConstant)
+        while not node.is_terminal:
+            if node.is_fully_expanded:
+                node = self.get_best_child(node, self.exploration_constant)
             else:
                 return self.expand(node)
         return node
 
     def expand(self, node):
-        actions = node.state.getPossibleActions()
+        actions = node.state.get_possible_actions()
         for action in actions:
             if action not in node.children:
-                newNode = treeNode(node.state.takeAction(action), node)
-                node.children[action] = newNode
+                new_node = TreeNode(node.state.take_action(action), node)
+                node.children[action] = new_node
                 if len(actions) == len(node.children):
-                    node.isFullyExpanded = True
-                return newNode
+                    node.is_fully_expanded = True
+                return new_node
 
         raise Exception("Should never reach here")
 
     def backpropogate(self, node, reward):
         while node is not None:
-            node.numVisits += 1
-            node.totalReward += reward
+            node.num_visits += 1
+            node.total_reward += reward
             node = node.parent
             reward *= -1  # Flipping reward sign between player
 
-    def get_best_child(self, node, explorationValue):
-        bestValue = float("-inf")
-        bestNodes = []
+    def get_best_child(self, node, exploration_value):
+        best_value = float("-inf")
+        best_nodes = []
         for child in node.children.values():
-            nodeValue = child.totalReward / child.numVisits + explorationValue * math.sqrt(
-                2 * math.log(node.numVisits) / child.numVisits)
-            if nodeValue > bestValue:
-                bestValue = nodeValue
-                bestNodes = [child]
-            elif nodeValue == bestValue:
-                bestNodes.append(child)
-        return random.choice(bestNodes)
+            node_value = child.total_reward / child.num_visits + exploration_value * math.sqrt(
+                2 * math.log(node.num_visits) / child.num_visits)
+            if node_value > best_value:
+                best_value = node_value
+                best_nodes = [child]
+            elif node_value == best_value:
+                best_nodes.append(child)
+        return random.choice(best_nodes)

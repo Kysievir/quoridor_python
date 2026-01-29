@@ -7,7 +7,6 @@ class Player:
         self.name = name
         # Starting from 0, this determines the play order.
         self.player_no = player_no
-        self.fences_remaining = 10
 
     def play(self, board: Board) -> Action:
         pass

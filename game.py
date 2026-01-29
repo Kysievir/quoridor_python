@@ -14,9 +14,5 @@ class Game:
             player = self.players[curr_player_no - 1]
             action = player.play(self.board)
             self.board.update(action)
-            
-            # This probably should be moved inside Board.
-            if isinstance(action, PlaceFence):
-                player.fences_remaining -= 1
 
             curr_player_no = curr_player_no % 2 + 1

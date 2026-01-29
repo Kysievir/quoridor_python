@@ -13,6 +13,7 @@ class BoardWrapper(StateInterface):
         actions = []
         actions += [MovePawn(x, y) 
                     for x, y in self.board.get_valid_pawn_moves()]
+        
         actions += [PlaceFence(x, y, dir) 
                     for x, y, dir in self.board.get_valid_fence_placements()]
         return actions
@@ -25,5 +26,8 @@ class BoardWrapper(StateInterface):
 
     def get_reward(self):
         # only needed for terminal states
-        raise NotImplementedError()
+        if self.is_terminal():
+            return 1 if self.board.winner == 1 else -1
+        else:
+            return 0
     
