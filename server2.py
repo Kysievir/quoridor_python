@@ -1,4 +1,7 @@
 from game import Game
+from board import Board
+
+import socket
 
 # This version will use the Game and Player class.
 class Server:

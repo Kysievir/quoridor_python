@@ -141,16 +141,16 @@ class Board:
                 or ((x, y, True) in self.fences_flat)):
             val_moves.add((x, y + 1))
         
-        if not (((x - 1, y - 1) in self.fences_flat) 
-                or ((x, y - 1) in self.fences_flat)):
+        if not (((x - 1, y - 1, True) in self.fences_flat) 
+                or ((x, y - 1, True) in self.fences_flat)):
             val_moves.add((x, y - 1))
 
-        if not (((x - 1, y) in self.fences_flat) 
-                or ((x - 1, y - 1) in self.fences_flat)):
+        if not (((x - 1, y, False) in self.fences_flat) 
+                or ((x - 1, y - 1, False) in self.fences_flat)):
             val_moves.add((x - 1, y))
         
-        if not (((x, y) in self.fences_flat) 
-                or ((x, y - 1) in self.fences_flat)):
+        if not (((x, y, False) in self.fences_flat) 
+                or ((x, y - 1, False) in self.fences_flat)):
             val_moves.add((x + 1, y))
         
         if (x_opp, y_opp) in val_moves:
