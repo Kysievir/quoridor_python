@@ -1,4 +1,5 @@
 import pygame
+from player import BotPlayer
 
 GRID_SIZE = 9
 CELL_SIZE = 60
@@ -30,8 +31,8 @@ def draw_board(screen):
 
 
 def draw_player(screen, row, col, player):
-    x = col * CELL_SIZE + CELL_SIZE // 2
-    y = row * CELL_SIZE + CELL_SIZE // 2
+    x = (col - 1) * CELL_SIZE + CELL_SIZE // 2
+    y = (row - 1) * CELL_SIZE + CELL_SIZE // 2
 
     if player.is_bot:
         color = YELLOW
@@ -41,20 +42,29 @@ def draw_player(screen, row, col, player):
     pygame.draw.circle(screen, color, (x, y), CELL_SIZE // 3)
 
 
-def draw_fence(screen, row, col, direction, player):
-    color = RED if player.player_no == 1 else BLUE
+def draw_fence(screen, row, col, direction, owner, is_bot=False):
+    if owner == 1:
+        color = RED
+    elif owner == 2 and is_bot:
+        color = YELLOW
+    else:
+        color = BLUE
 
-    if direction == "H":
+    # Convert board coords (1–8) → pixel coords
+    px = (col - 1) * CELL_SIZE
+    py = (row - 1) * CELL_SIZE
+
+    if direction:  # horizontal
         rect = pygame.Rect(
-            col * CELL_SIZE,
-            row * CELL_SIZE - 5,
+            px,
+            py + CELL_SIZE - 5,
             CELL_SIZE * 2,
             10
         )
-    else:  # "V"
+    else:  # vertical
         rect = pygame.Rect(
-            col * CELL_SIZE - 5,
-            row * CELL_SIZE,
+            px + CELL_SIZE - 5,
+            py,
             10,
             CELL_SIZE * 2
         )

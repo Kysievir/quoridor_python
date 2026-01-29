@@ -4,7 +4,7 @@ import threading
 import time
 import random
 from board import Board
-from actions import MovePawn
+from actions import MovePawn, PlaceFence
 
 
 class QuoridorServer:
@@ -42,7 +42,7 @@ class QuoridorServer:
                     break
 
                 action = pickle.loads(data)
-                if isinstance(action, MovePawn) and self.board.curr_player == player_id:
+                if isinstance(action, (MovePawn, PlaceFence)) and self.board.curr_player == player_id:
                     self.board.update(action)
                     self.broadcast(self.board)
 
