@@ -21,8 +21,6 @@ class StateInterface():
         # only needed for terminal states
         raise NotImplementedError()
 
-    def __eq__(self, other):
-        raise NotImplementedError()
 
 
 def random_policy(state):
@@ -60,8 +58,8 @@ class MCTS():
             if iteration_limit != None:
                 raise ValueError("Cannot have both a time limit and an iteration limit")
             # time taken for each MCTS search in milliseconds
-            self.timeLimit = time_limit
-            self.limitType = 'time'
+            self.time_limit = time_limit
+            self.limit_type = 'time'
         else:
             if iteration_limit == None:
                 raise ValueError("Must have either a time limit or an iteration limit")

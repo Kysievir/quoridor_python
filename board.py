@@ -82,6 +82,51 @@ class Board:
         
         self._discard_disconnecting_fences()
 
+    def _discard_disconnecting_fences(self):
+
+        for placement in self.valid_fence_placements:
+            graph_copy = self.graph.copy()
+            x, y, dir = placement
+            if dir:
+                graph_copy.delete_edges([
+                    (graph_copy.vs.find(name=(x, y)),
+                     graph_copy.vs.find(name=(x, y + 1))),
+                    (graph_copy.vs.find(name=(x + 1, y)),
+                     graph_copy.vs.find(name=(x + 1, y + 1)))
+                ])
+            else:
+                graph_copy.delete_edges([
+                    (graph_copy.vs.find(name=(x, y)),
+                     graph_copy.vs.find(name=(x + 1, y))),
+                    (graph_copy.vs.find(name=(x, y + 1)),
+                     graph_copy.vs.find(name=(x + 1, y + 1)))
+                ])
+            
+            final_y = 10 if self.curr_player == 1 else 0
+            components = graph_copy.connected_components(mode="weak")
+            membership = components.membership
+            pawn_membership = membership[graph_copy.vs.find(name=self.pawns[self.curr_player - 1])]
+
+            # Check that at least one final position is reachable, ie in the same connected component as the pawn.
+            if not any((membership[graph_copy.vs.find(name=(x, final_y))] == pawn_membership
+                        for x in range(1, 10))):
+                self.valid_fence_placements.discard(placement)
+            
+        # # An alternative method with igraph all_minimal_st_separators
+        # # It should be faster, but finding the corresponding fences gets too complicated.
+        # seps = self.graph.all_minimal_st_separators()
+        # two_vertex_seps = []
+        # one_vertex_seps = []
+        # for sep in seps:  # sep is a set of vertices
+        #     if len(sep) == 2:
+        #         two_vertex_seps.append(list(map(Board._vertex_id_to_name, sep)))
+        #     elif len(sep) == 1:
+        #         one_vertex_seps.append(Board._vertex_id_to_name(sep.pop()))
+        
+        # two_vertex_seps = [sep for sep in two_vertex_seps 
+        #                    if Board._are_adjacent_cells(sep[0], sep[1])]
+        # STILL NOT WORKING
+
     def get_valid_pawn_moves(self) -> set[tuple[int, int]]:
         val_moves = set()
         if self.curr_player == 1:
@@ -116,16 +161,16 @@ class Board:
                     or ((x_opp, y_opp, True) in self.fences_flat)):
                 val_moves.add((x_opp, y_opp + 1))
             
-            if not (((x_opp - 1, y_opp - 1) in self.fences_flat) 
-                    or ((x_opp, y_opp - 1) in self.fences_flat)):
+            if not (((x_opp - 1, y_opp - 1, True) in self.fences_flat) 
+                    or ((x_opp, y_opp - 1, True) in self.fences_flat)):
                 val_moves.add((x_opp, y_opp - 1))
 
-            if not (((x_opp - 1, y_opp) in self.fences_flat) 
-                    or ((x_opp - 1, y_opp - 1) in self.fences_flat)):
+            if not (((x_opp - 1, y_opp, False) in self.fences_flat) 
+                    or ((x_opp - 1, y_opp - 1, False) in self.fences_flat)):
                 val_moves.add((x_opp - 1, y_opp))
             
-            if not (((x_opp, y_opp) in self.fences_flat) 
-                    or ((x_opp, y_opp - 1) in self.fences_flat)):
+            if not (((x_opp, y_opp, False) in self.fences_flat) 
+                    or ((x_opp, y_opp - 1, False) in self.fences_flat)):
                 val_moves.add((x_opp + 1, y_opp))
         
 
@@ -133,60 +178,15 @@ class Board:
                      if (move[0] > 0 and move[0] <= self.cols)}
         
         return val_moves
-    
-    def _discard_disconnecting_fences(self) -> set[tuple[int, int, bool]]:
 
-        # TODO: Ensure the board is not totally divided.
-        # Use igraph all_minimal_st_separators to check each separator of size <= 2
-
-        for placement in self.valid_fence_placements:
-            graph_copy = self.graph.copy()
-            x, y, dir = placement
-            if dir:
-                graph_copy.delete_edges([
-                    (graph_copy.vs.find(name=(x, y)),
-                     graph_copy.vs.find(name=(x, y + 1))),
-                    (graph_copy.vs.find(name=(x + 1, y)),
-                     graph_copy.vs.find(name=(x + 1, y + 1)))
-                ])
-            else:
-                graph_copy.delete_edges([
-                    (graph_copy.vs.find(name=(x, y)),
-                     graph_copy.vs.find(name=(x + 1, y))),
-                    (graph_copy.vs.find(name=(x, y + 1)),
-                     graph_copy.vs.find(name=(x + 1, y + 1)))
-                ])
-            
-            final_y = 10 if self.curr_player == 1 else 0
-            components = graph_copy.connected_components(mode="weak")
-            membership = components.membership
-            pawn_membership = membership[graph_copy.vs.find(name=self.pawns[self.curr_player - 1])]
-
-            if not any((membership[graph_copy.vs.find(name=(x, final_y))] == pawn_membership
-                        for x in range(1, 10))):
-                self.valid_fence_placements.discard(placement)
-            
-        # # An alternative method with igraph all_minimal_st_separators
-        # # It should be faster, but finding the corresponding fences gets too complicated.
-        # seps = self.graph.all_minimal_st_separators()
-        # two_vertex_seps = []
-        # one_vertex_seps = []
-        # for sep in seps:  # sep is a set of vertices
-        #     if len(sep) == 2:
-        #         two_vertex_seps.append(list(map(Board._vertex_id_to_name, sep)))
-        #     elif len(sep) == 1:
-        #         one_vertex_seps.append(Board._vertex_id_to_name(sep.pop()))
-        
-        # two_vertex_seps = [sep for sep in two_vertex_seps 
-        #                    if Board._are_adjacent_cells(sep[0], sep[1])]
-        # STILL NOT WORKING
-
-    def get_valid_fence_placement(self):
-        return self.valid_fence_placements
+    def get_valid_fence_placements(self) -> set[tuple[int, int, bool]]:
+        if self.fences_remaining[self.curr_player - 1] > 0:
+            return self.valid_fence_placements
+        else:
+            return set()
 
     def update(self, action: Action):
         if isinstance(action, MovePawn):
-            self.move_pawn(action.x, action.y)
             x = action.x
             y = action.y
             if (x, y) not in self.get_valid_pawn_moves():
@@ -204,16 +204,16 @@ class Board:
             self.place_fence(action.x, action.y, action.direction)
         
 
-        # P1 wins if they reach the last row (index 8)
-        # P2 wins if they reach the first row (index 0)
-        if (self.pawns[0][0] == self.rows - 1):
+        # P1 wins if they reach the last row (index 10 normally)
+        # P2 wins if they reach the first row (index 0 normally)
+        if (self.pawns[0][0] == self.rows + 1):
             self.winner = 1
             self.is_terminal = True
         elif self.pawns[1][0] == 0:
             self.winner = 2
             self.is_terminal = True
-
-        self.curr_player = self.curr_player % 2 + 1
+        else:
+            self.curr_player = self.curr_player % 2 + 1
 
 # Wrapper class for MCTS integration
 class BoardWrapper(StateInterface):

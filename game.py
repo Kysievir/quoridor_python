@@ -8,7 +8,7 @@ class Game:
         self.num_players = 2  # This is fixed for now.
         self.board = Board(rows, cols)
     
-    def run(self):
+    def run(self) -> int:
         curr_player_no = 1
         while not self.board.is_terminal:
             player = self.players[curr_player_no - 1]
@@ -16,3 +16,5 @@ class Game:
             self.board.update(action)
 
             curr_player_no = curr_player_no % 2 + 1
+        
+        return self.board.winner
