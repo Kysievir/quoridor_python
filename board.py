@@ -2,7 +2,7 @@ from actions import Action, MovePawn, PlaceFence
 from mcts import StateInterface
 
 from igraph import Graph
-import json
+
 
 # TODO: Saving and initializing from a board position
 class Board:
@@ -232,8 +232,9 @@ class Board:
         # ---- BOARD BOUNDS ----
         val_moves = {
             (x, y) for (x, y) in val_moves
-            if 1 <= x <= self.cols and 0 <= y <= self.rows + 1
+            if 1 <= x <= self.cols and 1 <= y <= self.rows
         }
+
 
         return val_moves
 
@@ -265,14 +266,17 @@ class Board:
 
         # P1 wins if they reach the last row (index 10 normally)
         # P2 wins if they reach the first row (index 0 normally)
-        if (self.pawns[0][0] == self.rows):
+        if (self.pawns[0][1] == self.rows):
             self.winner = 1
             self.is_terminal = True
-        elif self.pawns[1][0] == 1:
+        elif self.pawns[1][1] == 1:
             self.winner = 2
             self.is_terminal = True
         else:
             self.curr_player = self.curr_player % 2 + 1
+        
+
+
 
 # Wrapper class for MCTS integration
 class BoardState(StateInterface):

@@ -33,7 +33,8 @@ def draw_empty_board(screen):
 
 
 def draw_player(screen, x, y, player_no: int, is_bot: bool):
-    x, y = convert_coord(x, y)
+    x, y = convert_coord(x, y) # different coord in board and pygame
+    # grid cell -> pixel center
     x_center = (x - 1) * CELL_SIZE + CELL_SIZE // 2
     y_center = (y - 1) * CELL_SIZE + CELL_SIZE // 2
 

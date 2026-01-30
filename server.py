@@ -28,7 +28,7 @@ class QuoridorServer:
         time.sleep(0.5)
         valid_moves = list(self.board.get_valid_pawn_moves())
         if valid_moves:
-            move = min(valid_moves, key=lambda m: m[0])
+            move = min(valid_moves, key=lambda m: m[1])
             self.board.update(MovePawn(move[0], move[1]))
             self.broadcast(self.board)
 
