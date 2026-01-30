@@ -2,7 +2,7 @@ from board import Board
 from actions import MovePawn, PlaceFence
 from graphics import (
     WIDTH, HEIGHT, CELL_SIZE, RED, BLUE, BLACK,
-    draw_empty_board, draw_player, draw_fence
+    draw_empty_board, draw_player, draw_fence, convert_coord
 )
 
 import pygame
@@ -12,7 +12,7 @@ import pickle
 
 # Maybe a Home page to select mode instead of doing it in the terminal.
 class Client:
-    def __init__(self, host='127.0.0.1', port=5555):
+    def __init__(self, host='127.0.0.1', port=5556):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.host = host
         self.port = port
@@ -58,7 +58,7 @@ class Client:
         except:
             self.connected = False
 
-    def run_client(self):
+    def run(self):
         if not self.connect():
             print("Server not found! Run 'python main.py server' first.")
             return
@@ -100,12 +100,12 @@ class Client:
                 f"You are Player {self.player_id}", True, BLACK)
             self.screen.blit(id_text, (20, HEIGHT - 30))
 
-            p1_r, p1_c = board.pawns[0]
-            draw_player(self.screen, p1_r, p1_c, 1, False)
+            p1_x, p1_y = board.pawns[0]
+            draw_player(self.screen, p1_x, p1_y, 1, False)
 
-            p2_r, p2_c = board.pawns[1]
+            p2_x, p2_y = board.pawns[1]
             is_bot = (self.mode == "HUMAN_BOT")
-            draw_player(self.screen, p2_r, p2_c, 2, is_bot)
+            draw_player(self.screen, p2_x, p2_y, 2, is_bot)
 
             pygame.display.flip()
 
@@ -123,16 +123,16 @@ class Client:
                     print("MOUSE CLICK DETECTED")
 
                 if event.type == pygame.KEYDOWN and board.curr_player == self.player_id:
-                    r, c = board.pawns[self.player_id - 1]
+                    x, y = board.pawns[self.player_id - 1]
                     move = None
                     if event.key == pygame.K_UP:
-                        move = (r, c + 1)  # (r - 1, c)
+                        move = (x, y + 1) 
                     elif event.key == pygame.K_DOWN:
-                        move = (r, c - 1)# (r + 1, c)
+                        move = (x, y - 1)
                     elif event.key == pygame.K_LEFT:
-                        move = (r - 1, c)
+                        move = (x - 1, y)
                     elif event.key == pygame.K_RIGHT:
-                        move = (r + 1, c)
+                        move = (x + 1, y)
 
                     if move and move in board.get_valid_pawn_moves():
                         self.send_action(MovePawn(move[0], move[1]))
@@ -144,35 +144,37 @@ class Client:
                     cell_x = mx // CELL_SIZE
                     cell_y = my // CELL_SIZE
 
+                    cell_x, cell_y = convert_coord(cell_x, cell_y)
+
                     offset_x = mx % CELL_SIZE
                     offset_y = my % CELL_SIZE
 
                     SNAP_MARGIN = 10  # pixels near border
 
                     direction = None
-                    row = col = None
+                    y = x = None
 
                     # Near horizontal border → horizontal fence
                     if offset_y < SNAP_MARGIN:
                         direction = True   # horizontal
-                        row = cell_y
-                        col = cell_x
+                        y = cell_y
+                        x = cell_x
 
                     # Near vertical border → vertical fence
                     elif offset_x < SNAP_MARGIN:
                         direction = False  # vertical
-                        row = cell_y
-                        col = cell_x
+                        y = cell_y
+                        x = cell_x
 
+                    # if direction is not None:
+                    #     # board is 1-indexed
+                    #     row += 1
+                    #     col += 1
+
+                    # Fence positions are only valid in 1..8 TODO: Use get_valid instead.
                     if direction is not None:
-                        # board is 1-indexed
-                        row += 1
-                        col += 1
-
-                        # Fence positions are only valid in 1..8
-                        if 1 <= row <= 8 and 1 <= col <= 8:
-                            self.send_action(PlaceFence(col, row, direction))
-
-            
+                        if 1 <= x <= 8 and 1 <= y <= 8:
+                            self.send_action(PlaceFence(x, y, direction))
+                            print(f"Placing fence {(x, y, direction)}")
 
         pygame.quit()
