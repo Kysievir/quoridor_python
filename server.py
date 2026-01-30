@@ -8,7 +8,7 @@ from actions import MovePawn, PlaceFence
 
 
 class QuoridorServer:
-    def __init__(self, host='0.0.0.0', port=5555):
+    def __init__(self, host='0.0.0.0', port=5556):
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server.bind((host, port))
         self.server.listen(2)
@@ -80,4 +80,5 @@ class QuoridorServer:
         self.broadcast(self.board)
 
         while True:
+            # TODO: Actually board updates should be handled here. Threads should only accept inputs.
             time.sleep(1)

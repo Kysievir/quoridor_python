@@ -10,6 +10,7 @@ class BotPlayer(Player):
 
     def play(self, board: Board):
         board_state = BoardState(board)
+        # TODO: Set an appriopriate iteration_limit.
         mcts = MCTS(time_limit=5)  # time_limit is in seconds
         action = mcts.search(initial_state=board_state)
 

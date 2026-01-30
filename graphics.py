@@ -32,19 +32,20 @@ def draw_empty_board(screen):
         )
 
 
-def draw_player(screen, row, col, player_no: int, is_bot: bool):
-    x = (col - 1) * CELL_SIZE + CELL_SIZE // 2
-    y = (row - 1) * CELL_SIZE + CELL_SIZE // 2
+def draw_player(screen, x, y, player_no: int, is_bot: bool):
+    x, y = convert_coord(x, y)
+    x_center = (x - 1) * CELL_SIZE + CELL_SIZE // 2
+    y_center = (y - 1) * CELL_SIZE + CELL_SIZE // 2
 
     if is_bot:
         color = YELLOW
     else:
         color = RED if player_no == 1 else BLUE
 
-    pygame.draw.circle(screen, color, (x, y), CELL_SIZE // 3)
+    pygame.draw.circle(screen, color, (x_center, y_center), CELL_SIZE // 3)
 
 
-def draw_fence(screen, row, col, direction, owner, is_bot=False):
+def draw_fence(screen, x, y, direction, owner, is_bot=False):
     if owner == 1:
         color = RED
     elif owner == 2 and is_bot:
@@ -52,21 +53,22 @@ def draw_fence(screen, row, col, direction, owner, is_bot=False):
     else:
         color = BLUE
 
+    x, y = convert_coord(x, y, fence=True)
     # Convert board coords (1–8) → pixel coords
-    px = (col - 1) * CELL_SIZE
-    py = (row - 1) * CELL_SIZE
+    px = x * CELL_SIZE
+    py = y * CELL_SIZE
 
     if direction:  # horizontal
         rect = pygame.Rect(
-            px,
-            py + CELL_SIZE - 5,
+            px - CELL_SIZE,
+            py - 5,
             CELL_SIZE * 2,
             10
         )
     else:  # vertical
         rect = pygame.Rect(
-            px + CELL_SIZE - 5,
-            py,
+            px - 5,
+            py - CELL_SIZE,
             10,
             CELL_SIZE * 2
         )
@@ -82,3 +84,10 @@ def draw_win(screen, font, winner_id):
 
 def draw_board(board: Board):
     pass
+
+def convert_coord(x, y, fence=False):
+    """Interchange between board and pygame coordinate"""
+    if not fence:
+        return x, 10 - y
+    else:
+        return x, 9 - y

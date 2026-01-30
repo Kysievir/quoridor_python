@@ -131,6 +131,7 @@ class Board:
 
         
         self._discard_disconnecting_fences()
+        print("fence placed")
 
     def _discard_disconnecting_fences(self):
         for placement in self.valid_fence_placements:
@@ -225,6 +226,8 @@ class Board:
             if not (((x_opp, y_opp - 1, False) in self.fences_flat) or
                     ((x_opp, y_opp, False) in self.fences_flat)):
                 val_moves.add((x_opp + 1, y_opp))
+            
+            val_moves.discard((x, y))
 
         # ---- BOARD BOUNDS ----
         val_moves = {
