@@ -82,8 +82,10 @@ def draw_win(screen, font, winner_id):
     rect = text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
     screen.blit(text, rect)
 
+
 def draw_board(board: Board):
     pass
+
 
 def convert_coord(x, y, fence=False):
     """Interchange between board and pygame coordinate"""
@@ -91,3 +93,21 @@ def convert_coord(x, y, fence=False):
         return x, 10 - y
     else:
         return x, 9 - y
+
+
+def draw_fence_preview(screen, x, y, direction, color=(200, 200, 200, 150)):
+    """Draws a semi-transparent fence preview."""
+    # Quoridor coordinates (1-8) to pixel coordinates
+    x_px, y_px = convert_coord(x, y, fence=True)
+    px = x_px * CELL_SIZE
+    py = y_px * CELL_SIZE
+
+    # Create a transparent surface
+    s = pygame.Surface((CELL_SIZE * 2 if direction else 10,
+                       10 if direction else CELL_SIZE * 2), pygame.SRCALPHA)
+    s.fill(color)  # Light gray with transparency
+
+    if direction:  # horizontal
+        screen.blit(s, (px - CELL_SIZE, py - 5))
+    else:  # vertical
+        screen.blit(s, (px - 5, py - CELL_SIZE))

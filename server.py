@@ -2,7 +2,6 @@ import socket
 import pickle
 import threading
 import time
-import random
 from board import Board
 from actions import MovePawn, PlaceFence
 
@@ -14,71 +13,41 @@ class QuoridorServer:
         self.server.listen(2)
         self.connections = []
         self.board = Board()
-
-        print("Choose game mode:")
-        print("1 - Human vs Bot")
-        print("2 - Human vs Human")
-        choice = input("Enter 1 or 2: ")
-        self.mode = "HUMAN_BOT" if choice == "1" else "HUMAN_HUMAN"
-
-    def handle_bot_turn(self):
-        if self.board.is_terminal or self.board.curr_player != 2:
-            return
-
-        time.sleep(0.5)
-        valid_moves = list(self.board.get_valid_pawn_moves())
-        if valid_moves:
-            move = min(valid_moves, key=lambda m: m[0])
-            self.board.update(MovePawn(move[0], move[1]))
-            self.broadcast(self.board)
+        self.mode = "HUMAN_HUMAN"
 
     def handle_client(self, conn, player_id):
         conn.sendall(pickle.dumps({"player_id": player_id, "mode": self.mode}))
-
         while True:
             try:
-                data = conn.recv(4096)
+                data = conn.recv(8192)
                 if not data:
                     break
-
                 action = pickle.loads(data)
-                if isinstance(action, (MovePawn, PlaceFence)) and self.board.curr_player == player_id:
-                    self.board.update(action)
-                    self.broadcast(self.board)
-
-                    if self.mode == "HUMAN_BOT":
-                        self.handle_bot_turn()
+                if self.board.curr_player == player_id and not self.board.is_terminal:
+                    if self.board.update(action):
+                        self.broadcast(self.board)
             except:
                 break
-
-        if conn in self.connections:
-            self.connections.remove(conn)
         conn.close()
 
     def broadcast(self, data):
-        serialized_data = pickle.dumps(data)
+        serialized = pickle.dumps(data)
         for conn in self.connections:
             try:
-                conn.sendall(serialized_data)
+                conn.sendall(serialized)
             except:
                 continue
 
     def run(self):
-        print(f"Server started ({self.mode}). Waiting for players...")
-        needed = 1 if self.mode == "HUMAN_BOT" else 2
-
-        while len(self.connections) < needed:
+        print("Server waiting for 2 players...")
+        while len(self.connections) < 2:
             conn, addr = self.server.accept()
             p_id = len(self.connections) + 1
             self.connections.append(conn)
-            print(f"Player {p_id} connected from {addr}")
             threading.Thread(target=self.handle_client,
                              args=(conn, p_id), daemon=True).start()
 
-        # Sync initial board to all clients
-        time.sleep(0.5)
+        time.sleep(1)
         self.broadcast(self.board)
-
         while True:
-            # TODO: Actually board updates should be handled here. Threads should only accept inputs.
             time.sleep(1)
